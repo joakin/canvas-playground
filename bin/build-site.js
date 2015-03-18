@@ -11,7 +11,7 @@ sh.mkdir('-p', buildFolder)
 var dirs = sh.ls('lib/demos/*')
 dirs.forEach(function(dir) {
   if (sh.test('-d', dir)) {
-    var buildPath = path.join(buildFolder, dir)
+    var buildPath = path.join(buildFolder, path.basename(dir))
     console.log('Creating ', buildPath)
     sh.mkdir('-p', buildPath)
     indexHtml.to(path.join(buildPath, 'index.html'))
