@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "node bin/build-site.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -11,5 +12,9 @@
   "dependencies": {
     "canvas-testbed": "^1.0.2",
     "cycle-values": "^1.0.1"
+  },
+  "devDependencies": {
+    "browserify": "^9.0.3",
+    "shelljs": "^0.4.0"
   }
 }
