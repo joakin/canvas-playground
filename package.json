@@ -11,7 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "canvas-testbed": "^1.0.2",
-    "cycle-values": "^1.0.1"
+    "cycle-values": "^1.0.1",
+    "time-accumulator": "0.0.0"
   },
   "devDependencies": {
     "browserify": "^9.0.3",

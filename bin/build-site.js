@@ -7,7 +7,7 @@ var buildFolder = 'build'
 var indexHtml = sh.cat('demo.html')
 
 sh.mkdir('-p', buildFolder)
-sh.cp('index.html', buildFolder)
+sh.cp('-f', 'main.html', path.join(buildFolder, 'index.html'))
 
 var dirs = sh.ls('lib/demos/*')
 dirs.forEach(function(dir) {
