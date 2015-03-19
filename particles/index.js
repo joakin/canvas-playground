@@ -9,7 +9,8 @@ var minParticleSize = 2
 var maxParticleSize = 5
 function start(context, width, height) {
   this.canvas.addEventListener('click', onClick);
-  function onClick() {
+  function onClick(e) {
+    e.preventDefault();
     numParticles = 1 + Math.random()*400
     minParticleSize = 2 + Math.random()*10
     maxParticleSize = minParticleSize + Math.random()*20
@@ -20,6 +21,12 @@ function start(context, width, height) {
   function onMousemove(e) {
     mouse.x = e.clientX;
     mouse.y = e.clientY;
+  }
+  this.canvas.addEventListener('touchmove', onTouchMove);
+  function onTouchMove(e) {
+    e.preventDefault();
+    mouse.x = e.touches[0].clientX;
+    mouse.y = e.touches[0].clientY;
   }
 
   init(context, width, height)
@@ -51,6 +58,12 @@ function render(context, width, height) {
     particles[i].update()
     particles[i].draw(context)
   }
+  drawPointer(mouse, context)
+}
+
+function drawPointer(mouse, context) {
+  context.fillStyle = 'rgba(255, 255, 255, 1)'
+  h.fillCircle(context, mouse.x, mouse.y, 5)
 }
 
 function Particle(x, y, vx, vy, color) {
