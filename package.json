@@ -10,9 +10,21 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "array-range": "^1.0.1",
     "canvas-testbed": "^1.0.2",
+    "color-style": "^1.0.0",
     "cycle-values": "^1.0.1",
-    "time-accumulator": "0.0.0"
+    "fill-circle": "^1.0.0",
+    "gl-vec2": "^1.0.0",
+    "gl-vec3": "^1.0.3",
+    "lerp-array": "^1.1.1",
+    "randf": "^1.0.0",
+    "time-accumulator": "0.0.0",
+    "touches": "^1.1.1",
+    "vectors": "^0.1.0",
+    "verlet-constraint": "^1.0.3",
+    "verlet-point": "^1.2.1",
+    "verlet-system": "^1.0.15"
   },
   "devDependencies": {
     "browserify": "^9.0.3",

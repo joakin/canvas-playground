@@ -3,7 +3,7 @@ require('canvas-testbed')(render, start)
 var cycle = require('cycle-values')
 var h = require('../../canvas-helpers')
 
-var blur = 0.1
+var blr = 0.1
 var speed = 1
 
 var cycleDemo = cycle([
@@ -12,7 +12,7 @@ var cycleDemo = cycle([
 ])
 var currentDemo = cycleDemo()
 
-function start(/* context, width, height */) {
+function start(/* ctx, width, height */) {
   var app = this
   var canvas = app.canvas
   canvas.onclick = function() {
@@ -21,9 +21,9 @@ function start(/* context, width, height */) {
   document.onkeydown = function(e) {
     switch(e.keyCode) {
       case 37: // Left, increase blur by decreasing alpha
-        console.log(blur = Math.max(0, blur*0.8)); break
+        console.log(blr = Math.max(0, blr*0.8)); break
       case 39: // Right, decrease blur by increasing alpha
-        console.log(blur = Math.min(1, blur*1.2)); break
+        console.log(blr = Math.min(1, blr*1.2)); break
       case 38: // Up, speed up time
         console.log(speed = speed*1.05); break
       case 40: // Down, slow down time
@@ -36,100 +36,98 @@ function start(/* context, width, height */) {
 
 var msg = 'click to change demo. <left>/<right> for blur.'
 
-function render(context, width, height) {
-  h.clear(blur, context, width, height)
-  h.drawFPS(this.fps, context)
-  h.drawBottomCenteredText(msg, context, width, height)
-  currentDemo(Date.now()/speed, context, width, height)
+function render(ctx, width, height) {
+  h.clear(blr, ctx, width, height)
+  h.drawFPS(this.fps, ctx)
+  h.drawBottomCenteredText(msg, ctx, width, height)
+  currentDemo(Date.now()/speed, ctx, width, height)
 }
 
 
-},{"../../canvas-helpers":2,"./original-dots":3,"./waves":4,"canvas-testbed":5,"cycle-values":14}],2:[function(require,module,exports){
-exports.clear = function(alpha, context, width, height) {
-  context.fillStyle = 'rgba(0,0,0,' + alpha || 0.5 + ')'
-  context.fillRect(0, 0, width, height)
+},{"../../canvas-helpers":2,"./original-dots":3,"./waves":4,"canvas-testbed":5,"cycle-values":15}],2:[function(require,module,exports){
+var rgb = require('color-style')
+
+exports.clear = function(alpha, ctx, width, height) {
+  ctx.fillStyle = rgb(0, 0, 0, alpha || 0.5)
+  ctx.fillRect(0, 0, width, height)
 }
 
-exports.drawFPS = function(fps, context) {
-  context.font = 'bold 12pt Courier'
-  context.textAlign = 'left'
-  context.fillStyle = 'rgba(255,0,0,1)'
-  context.fillText(fps + 'fps', 10, 20)
+exports.drawFPS = function(fps, ctx) {
+  ctx.font = 'bold 12pt Courier'
+  ctx.textAlign = 'left'
+  ctx.fillStyle = rgb(255,0,0)
+  ctx.fillText(fps + 'fps', 10, 20)
 }
 
-exports.drawBottomCenteredText = function(text, context, width, height) {
-  context.font = 'bold 12pt sans-serif'
-  context.textAlign = 'center'
-  context.fillStyle = 'rgba(255,255,0,1)'
-  context.fillText(text, width / 2, height - 20)
+exports.drawBottomCenteredText = function(text, ctx, width, height) {
+  ctx.font = 'bold 12pt sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillStyle = rgb(255,255,0)
+  ctx.fillText(text, width / 2, height - 20)
 }
 
-exports.fillCircle = function(context, x, y, r) {
-  context.beginPath()
-  context.arc(x, y, r, 0, 2 * Math.PI)
-  context.fill()
+exports.line = function(ctx, px, py, qx, qy, w) {
+  ctx.lineWidth = w
+  ctx.beginPath()
+  ctx.moveTo(px, py)
+  ctx.lineTo(qx, qy)
+  ctx.stroke()
 }
 
-exports.line = function(context, px, py, qx, qy, w) {
-  context.lineWidth = w
-  context.beginPath()
-  context.moveTo(px, py)
-  context.lineTo(qx, qy)
-  context.stroke()
-}
+},{"color-style":14}],3:[function(require,module,exports){
+var rgb = require('color-style')
 
-},{}],3:[function(require,module,exports){
-
-module.exports = function (now, context, width, height) {
+module.exports = function (now, ctx, width, height) {
   var X = function (a) { return (0.5 + Math.sin(2*a) / 3); }
   var Y = function (a) { return (0.5 + Math.sin(3*a) / 3); }
   var Z = function (a) { return (0.5 + Math.sin(8*a) / 2); }
   var T = 200
   t = (now % T) / T
 
-  context.font = 'bold 64pt Courier'
+  ctx.font = 'bold 64pt Courier'
   for (var i = 0, N = 179; i < N; ++i) {
     var a = 2 * Math.PI * (i + t) / N
-    // context.font = 'bold '+(12+Y(a)*52)+'pt Courier'
-    context.fillStyle = 'rgba(255,255,255,' + Z(a) + ')'
-    context.fillText('.', width * X(a), height * Y(a))
+    // ctx.font = 'bold '+(12+Y(a)*52)+'pt Courier'
+    ctx.fillStyle = rgb(255,255,255,Z(a))
+    ctx.fillText('.', width * X(a), height * Y(a))
   }
 }
 
-},{}],4:[function(require,module,exports){
+},{"color-style":14}],4:[function(require,module,exports){
+var rgb = require('color-style')
 
-module.exports = function(now, context, width, height) {
-  drawWave(now, 'sin', 'rgba(255,0,0,0.5)', context, width, height);
-  drawWave(now, 'cos', 'rgba(0,255,0,0.5)', context, width, height);
+module.exports = function(now, ctx, width, height) {
+  drawWave(now, 'sin', rgb(255,0,0,0.5), ctx, width, height);
+  drawWave(now, 'cos', rgb(0,255,0,0.5), ctx, width, height);
 }
 
-function drawWave(now, wave, color, context, width, height) {
+function drawWave(now, wave, color, ctx, width, height) {
   var T = 200
   var t = now / T
   wave = Math[wave]
 
-  drawLabel(t, context)
+  drawLabel(t, ctx)
 
   var amp = 0.3
   var Y = function(n) { return (0.5+n/2)*amp+(1-amp)/2 }
 
-  context.font = 'bold 12pt Courier'
-  context.fillStyle = color || 'rgba(255,255,255,1)'
+  ctx.font = 'bold 12pt Courier'
+  ctx.fillStyle = color || rgb(255,255,255)
   for (var i = 0, N = Math.max(width/3, 200); i < N; ++i) {
     var val = wave(6*Math.PI*(t+i)/N)
-    context.fillText('.', width * i/N, height * Y(val))
+    ctx.fillText('.', width * i/N, height * Y(val))
   }
 }
 
-function drawLabel(text, context) {
-  context.font = 'bold 12pt Courier';
-  context.textAlign = 'left'
-  context.fillStyle = 'rgba(255,255,255,1)';
-  context.fillText(text, 10, 50);
+function drawLabel(text, ctx) {
+  ctx.font = 'bold 12pt Courier'
+  ctx.textAlign = 'left'
+  ctx.fillStyle = rgb(255,255,255)
+  ctx.fillText(text, 10, 50)
 }
 
 
-},{}],5:[function(require,module,exports){
+},{"color-style":14}],5:[function(require,module,exports){
 var domready = require('domready');
 require('raf.js');
 
@@ -612,6 +610,54 @@ module.exports = function(opts) {
 }(window));
 
 },{}],14:[function(require,module,exports){
+module.exports = getString.bind(this, formatRGBA);
+
+module.exports.rgba = getString.bind(this, formatRGBA);
+module.exports.rgb = module.exports.rgba;
+
+module.exports.hsla = getString.bind(this, formatHSLA);
+module.exports.hsl = module.exports.hsla;
+
+function getString(format, r, g, b, a) {
+	//first argument is a string, return immediately
+	if (typeof r === 'string') {
+		return r;
+	}
+	//first argument is array, assume format:
+	//	rgba([r, g, b], a)
+	//	rgba([r, g, b, a])
+	//	rgba([r, g, b])
+	else if (Array.isArray(r)) {
+		var array = r;
+		var second = g;
+		r = array[0];
+		g = array[1];
+		b = array[2];
+		//if alpha is specified in the array, use it
+		//otherwise assume it's the second parameter
+		a = typeof array[3] === 'number' ? array[3] : second;
+	}
+	//first argument is a number or undefined, assume format:
+	//	rgba(r, g, b, a)
+	//	rgba(r, g, b)
+	//	rgba()  --> black
+	
+	//default values
+	a = typeof a === 'number' ? a : 1.0;
+	return format(r||0, g||0, b||0, a);
+}
+
+function formatRGBA(a, b, c, d) {
+	return 'rgba('+ ~~(a) + //0 - 255
+			',' + ~~(b)  + 
+			',' + ~~(c) + 
+			',' + d + ')';  //0.0 - 1.0
+}
+
+function formatHSLA(a, b, c, d) {
+	return 'hsla('+ a + ',' + b + '%,' + c + '%,' + d + ')';
+}
+},{}],15:[function(require,module,exports){
 var isNumber = require('isnumber')
 var mod = require('mod-loop')
 
@@ -626,7 +672,7 @@ module.exports = function(values) {
   }
 }
 
-},{"isnumber":15,"mod-loop":16}],15:[function(require,module,exports){
+},{"isnumber":16,"mod-loop":17}],16:[function(require,module,exports){
 module.exports = isNumber
 
 /**
@@ -637,7 +683,7 @@ module.exports = isNumber
 function isNumber(n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 }
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 module.exports = loop
 
 function loop(value, divisor) {

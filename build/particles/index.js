@@ -1,79 +1,95 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 require('canvas-testbed')(render, start)
 var h = require('../../canvas-helpers')
+var fillCircle = require('fill-circle')
+var randf = require('randf')
+var rgb = require('color-style')
+var hsl = require('color-style').hsl
+var touch = require('touches')
+var lerp = require('lerp-array')
 
 var mouse
 var particles
-var numParticles = 200
-var minParticleSize = 2
-var maxParticleSize = 5
-function start(context, width, height) {
+var n
+var minParticleSize
+var maxParticleSize
+
+function start(ctx, width, height) {
+  document.body.style.backgroundColor = 'black'
+
   this.canvas.addEventListener('click', onClick);
   function onClick(e) {
     e.preventDefault();
-    numParticles = 1 + Math.random()*400
-    minParticleSize = 2 + Math.random()*10
-    maxParticleSize = minParticleSize + Math.random()*20
-    init(context, width, height)
+    init(ctx, width, height)
   }
 
-  this.canvas.addEventListener('mousemove', onMousemove);
-  function onMousemove(e) {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-  }
-  this.canvas.addEventListener('touchmove', onTouchMove);
-  function onTouchMove(e) {
+  touch(this.canvas, {filtered: true}).on('move', onMove)
+  function onMove(e, pos) {
     e.preventDefault();
-    mouse.x = e.touches[0].clientX;
-    mouse.y = e.touches[0].clientY;
+    mouse = pos
   }
 
-  init(context, width, height)
+  init(ctx, width, height)
 }
 
-function init(context, width, height) {
-  mouse = { x: width * 0.5, y: height * 0.5 }
+function init(ctx, width, height) {
+  n = Math.ceil(randf(50, 400))
+  minParticleSize = randf(2, 30)
+  maxParticleSize = randf(minParticleSize, 50)
+
+  mouse = [width * 0.5, height * 0.5]
 
   particles = []
-  var dim = Math.min(width, height)
-  for ( var i = 0; i < numParticles; i++ ) {
+  var dim = Math.min(width, height)/(4+(4*maxParticleSize/30))
+  for ( var i = 0; i < n; i++ ) {
+    var a = angle(i, n)
+    var p = pointFromCircle(mouse, dim, a)
+    var p2 = pointFromCircle(mouse, dim, angle(i+1, n))
     particles[i] = new Particle(
-      mouse.x, mouse.y,
-      (Math.random()*dim - dim/2)/14,
-      (Math.random()*dim - dim/2)/14,
-      'hsla('+(i*100/numParticles)+', 80%, 40%, 1)'
+      p[0], p[1],
+      (p2[0]-p[0])*5, (p2[1]-p[1])*5,
+      hsl(lerp(300, 0, i*1/n), 80, 40, randf(0.5, 0.8)),
+      lerp(0.999, 0.985, i*1/n),
+      randf(minParticleSize, maxParticleSize)
     )
   }
 }
 
+function pointFromCircle(c, r, a) {
+  return [c[0] + r * Math.cos(a), c[1] + r * Math.sin(a)]
+}
+
+// Returns an angle in radians for num i in total n
+function angle(i, n) { return i*(360/n) * 2*Math.PI/360 }
+
 var msg = 'Click to randomly regenerate particles'
-function render(context, width, height) {
-  h.clear(0.2, context, width, height)
-  h.drawFPS(this.fps, context)
-  h.drawBottomCenteredText(msg, context, width, height)
+function render(ctx, width, height) {
+  ctx.clearRect(0, 0, width, height)
+  h.drawFPS(this.fps, ctx)
+  h.drawBottomCenteredText(msg, ctx, width, height)
+  ctx.lineCap="round";
   for ( var i = 0; i < particles.length; i++ ) {
     particles[i].bounce(0, 0, width, height)
     particles[i].attract(mouse)
     particles[i].update()
-    particles[i].draw(context)
+    particles[i].draw(ctx)
   }
-  drawPointer(mouse, context)
+  drawPointer(mouse, ctx)
 }
 
-function drawPointer(mouse, context) {
-  context.fillStyle = 'rgba(255, 255, 255, 1)'
-  h.fillCircle(context, mouse.x, mouse.y, 5)
+function drawPointer(mouse, ctx) {
+  ctx.fillStyle = rgb(255, 255, 255)
+  fillCircle(ctx, mouse[0], mouse[1], 5)
 }
 
-function Particle(x, y, vx, vy, color) {
+function Particle(x, y, vx, vy, color, friction, size) {
   this.x = this.oldx = x
   this.y = this.oldy = y
   this.vx = vx
   this.vy = vy
   this.color = color
-  this.friction = 0.999
-  this.size = minParticleSize+Math.random()*maxParticleSize
+  this.friction = friction
+  this.size = size
 }
 
 Particle.prototype.update = function() {
@@ -85,16 +101,14 @@ Particle.prototype.update = function() {
   this.y += this.vy
 }
 
-Particle.prototype.draw = function(context) {
-  context.strokeStyle = this.color
-  context.fillStyle = this.color
-  h.line(context, this.oldx, this.oldy, this.x, this.y, this.size)
-  h.fillCircle(context, this.x, this.y, this.size/2)
+Particle.prototype.draw = function(ctx) {
+  ctx.strokeStyle = this.color
+  h.line(ctx, this.oldx, this.oldy, this.x, this.y, this.size)
 }
 
 Particle.prototype.attract = function(to) {
-  var dx = to.x - this.x
-  var dy = to.y - this.y
+  var dx = to[0] - this.x
+  var dy = to[1] - this.y
   var distance = Math.sqrt(dx * dx + dy * dy)
   if (distance === 0) { distance = 1 }
   this.vx += dx / distance
@@ -110,41 +124,37 @@ Particle.prototype.bounce = function(x, y, w, h) {
 }
 
 
-},{"../../canvas-helpers":2,"canvas-testbed":3}],2:[function(require,module,exports){
-exports.clear = function(alpha, context, width, height) {
-  context.fillStyle = 'rgba(0,0,0,' + alpha || 0.5 + ')'
-  context.fillRect(0, 0, width, height)
+},{"../../canvas-helpers":2,"canvas-testbed":3,"color-style":12,"fill-circle":13,"lerp-array":14,"randf":16,"touches":17}],2:[function(require,module,exports){
+var rgb = require('color-style')
+
+exports.clear = function(alpha, ctx, width, height) {
+  ctx.fillStyle = rgb(0, 0, 0, alpha || 0.5)
+  ctx.fillRect(0, 0, width, height)
 }
 
-exports.drawFPS = function(fps, context) {
-  context.font = 'bold 12pt Courier'
-  context.textAlign = 'left'
-  context.fillStyle = 'rgba(255,0,0,1)'
-  context.fillText(fps + 'fps', 10, 20)
+exports.drawFPS = function(fps, ctx) {
+  ctx.font = 'bold 12pt Courier'
+  ctx.textAlign = 'left'
+  ctx.fillStyle = rgb(255,0,0)
+  ctx.fillText(fps + 'fps', 10, 20)
 }
 
-exports.drawBottomCenteredText = function(text, context, width, height) {
-  context.font = 'bold 12pt sans-serif'
-  context.textAlign = 'center'
-  context.fillStyle = 'rgba(255,255,0,1)'
-  context.fillText(text, width / 2, height - 20)
+exports.drawBottomCenteredText = function(text, ctx, width, height) {
+  ctx.font = 'bold 12pt sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillStyle = rgb(255,255,0)
+  ctx.fillText(text, width / 2, height - 20)
 }
 
-exports.fillCircle = function(context, x, y, r) {
-  context.beginPath()
-  context.arc(x, y, r, 0, 2 * Math.PI)
-  context.fill()
+exports.line = function(ctx, px, py, qx, qy, w) {
+  ctx.lineWidth = w
+  ctx.beginPath()
+  ctx.moveTo(px, py)
+  ctx.lineTo(qx, qy)
+  ctx.stroke()
 }
 
-exports.line = function(context, px, py, qx, qy, w) {
-  context.lineWidth = w
-  context.beginPath()
-  context.moveTo(px, py)
-  context.lineTo(qx, qy)
-  context.stroke()
-}
-
-},{}],3:[function(require,module,exports){
+},{"color-style":12}],3:[function(require,module,exports){
 var domready = require('domready');
 require('raf.js');
 
@@ -625,5 +635,536 @@ module.exports = function(opts) {
 	window.requestAnimationFrame = requestAnimationFrame;
 	window.cancelAnimationFrame = cancelAnimationFrame;
 }(window));
+
+},{}],12:[function(require,module,exports){
+module.exports = getString.bind(this, formatRGBA);
+
+module.exports.rgba = getString.bind(this, formatRGBA);
+module.exports.rgb = module.exports.rgba;
+
+module.exports.hsla = getString.bind(this, formatHSLA);
+module.exports.hsl = module.exports.hsla;
+
+function getString(format, r, g, b, a) {
+	//first argument is a string, return immediately
+	if (typeof r === 'string') {
+		return r;
+	}
+	//first argument is array, assume format:
+	//	rgba([r, g, b], a)
+	//	rgba([r, g, b, a])
+	//	rgba([r, g, b])
+	else if (Array.isArray(r)) {
+		var array = r;
+		var second = g;
+		r = array[0];
+		g = array[1];
+		b = array[2];
+		//if alpha is specified in the array, use it
+		//otherwise assume it's the second parameter
+		a = typeof array[3] === 'number' ? array[3] : second;
+	}
+	//first argument is a number or undefined, assume format:
+	//	rgba(r, g, b, a)
+	//	rgba(r, g, b)
+	//	rgba()  --> black
+	
+	//default values
+	a = typeof a === 'number' ? a : 1.0;
+	return format(r||0, g||0, b||0, a);
+}
+
+function formatRGBA(a, b, c, d) {
+	return 'rgba('+ ~~(a) + //0 - 255
+			',' + ~~(b)  + 
+			',' + ~~(c) + 
+			',' + d + ')';  //0.0 - 1.0
+}
+
+function formatHSLA(a, b, c, d) {
+	return 'hsla('+ a + ',' + b + '%,' + c + '%,' + d + ')';
+}
+},{}],13:[function(require,module,exports){
+module.exports = function(context, x, y, r) {
+  context.beginPath()
+  context.arc(x, y, r, 0, 2 * Math.PI)
+  context.fill()
+}
+
+},{}],14:[function(require,module,exports){
+var lerp = require('lerp')
+
+module.exports = function lerpValues(value1, value2, t, out) {
+    if (typeof value1 === 'number'
+            && typeof value2 === 'number')
+        return lerp(value1, value2, t)
+    else { //assume array
+        var len = Math.min(value1.length, value2.length)
+        out = out||new Array(len)
+        for (var i=0; i<len; i++) 
+            out[i] = lerp(value1[i], value2[i], t)
+        return out
+    }
+}
+},{"lerp":15}],15:[function(require,module,exports){
+function lerp(v0, v1, t) {
+    return v0*(1-t)+v1*t
+}
+module.exports = lerp
+},{}],16:[function(require,module,exports){
+function random(start, end) {
+    var n0 = typeof start === 'number',
+        n1 = typeof end === 'number'
+
+    if (n0 && !n1) {
+        end = start
+        start = 0
+    } else if (!n0 && !n1) {
+        start = 0
+        end = 1
+    }
+    return start + Math.random() * (end - start)
+}
+
+module.exports = random
+},{}],17:[function(require,module,exports){
+var Emitter = require('events/')
+
+var allEvents = [
+    'touchstart', 'touchmove', 'touchend',
+    'mousedown', 'mousemove', 'mouseup'
+]
+
+var ROOT = { left: 0, top: 0 }
+
+module.exports = function handler(element, opt) {
+    opt = opt||{}
+    element = element || window
+    
+    var emitter = new Emitter()
+    emitter.target = opt.target || element
+
+    var touch = null, which = null
+    var filtered = opt.filtered
+
+    var events = allEvents
+
+    //only a subset of events
+    if (typeof opt.type === 'string') {
+        events = allEvents.filter(function(type) {
+            return type.indexOf(opt.type) === 0
+        })
+    }
+
+    //grab the event functions
+    var funcs = events.map(function(type) {
+        var name = normalize(type)
+        var fn = function(ev) {
+            var client = ev
+            if (/^touch/.test(type)) {
+                if (filtered)
+                    client = getFilteredTouch(ev, type)
+                else
+                    client = getTargetTouch(ev.changedTouches, emitter.target)
+            }
+
+            if (!client)
+                return
+
+            //get 2D position
+            var pos = offset(client, emitter.target)
+            
+            //dispatch the normalized event to our emitter
+            emitter.emit(name, ev, pos)
+        }
+        return { type: type, listener: fn }
+    })
+    
+    emitter.enable = function enable() {
+        funcs.forEach(listeners(element, true))
+
+        return emitter
+    }
+
+    emitter.disable = function dispose() { 
+        funcs.forEach(listeners(element, false))
+
+        return emitter
+    }
+
+    //initially enabled
+    emitter.enable() 
+    return emitter
+
+    function getFilteredTouch(ev, type) {
+        var client
+
+        //clear touch if it was lifted
+        if (touch && /^touchend/.test(type)) {
+            //allow end event to trigger on tracked touch
+            client = getTouch(ev.changedTouches, touch.identifier||0)
+            if (client)
+                touch = null
+        }
+        //not yet tracking any touches, pick one from target
+        else if (!touch && /^touchstart/.test(type)) {
+            touch = client = getTargetTouch(ev.changedTouches, emitter.target)
+        }
+        //get the tracked touch
+        else if (touch)
+            client = getTouch(ev.changedTouches, touch.identifier||0)
+
+        return client
+    }
+}
+
+//get 2D client position of touch/mouse event
+function offset(ev, target) {
+    var cx = ev.clientX||0
+    var cy = ev.clientY||0
+    var rect = bounds(target)
+    return [ cx - rect.left, cy - rect.top ]
+}
+
+//since we are adding events to a parent we can't rely on targetTouches
+function getTargetTouch(touches, target) {
+    return Array.prototype.slice.call(touches).filter(function(t) {
+        return t.target === target
+    })[0] || touches[0]
+}
+
+function getTouch(touches, id) {
+    for (var i=0; i<touches.length; i++)
+        if (touches[i].identifier === id)
+            return touches[i]
+    return null
+}
+
+function listeners(e, enabled) {
+    return function(data) {
+        if (enabled)
+            e.addEventListener(data.type, data.listener)
+        else
+            e.removeEventListener(data.type, data.listener)
+    }
+}
+
+//normalize touchstart/mousedown to "start" etc
+function normalize(event) {
+    return event.replace(/^(touch|mouse)/, '')
+     .replace(/up$/, 'end')
+     .replace(/down$/, 'start')
+}
+
+function bounds(element) {
+    if (element===window
+            ||element===document
+            ||element===document.body)
+        return ROOT
+    else
+        return element.getBoundingClientRect()
+}
+},{"events/":18}],18:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+function EventEmitter() {
+  this._events = this._events || {};
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+EventEmitter.defaultMaxListeners = 10;
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!isNumber(n) || n < 0 || isNaN(n))
+    throw TypeError('n must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+EventEmitter.prototype.emit = function(type) {
+  var er, handler, len, args, i, listeners;
+
+  if (!this._events)
+    this._events = {};
+
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events.error ||
+        (isObject(this._events.error) && !this._events.error.length)) {
+      er = arguments[1];
+      if (er instanceof Error) {
+        throw er; // Unhandled 'error' event
+      }
+      throw TypeError('Uncaught, unspecified "error" event.');
+    }
+  }
+
+  handler = this._events[type];
+
+  if (isUndefined(handler))
+    return false;
+
+  if (isFunction(handler)) {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        len = arguments.length;
+        args = new Array(len - 1);
+        for (i = 1; i < len; i++)
+          args[i - 1] = arguments[i];
+        handler.apply(this, args);
+    }
+  } else if (isObject(handler)) {
+    len = arguments.length;
+    args = new Array(len - 1);
+    for (i = 1; i < len; i++)
+      args[i - 1] = arguments[i];
+
+    listeners = handler.slice();
+    len = listeners.length;
+    for (i = 0; i < len; i++)
+      listeners[i].apply(this, args);
+  }
+
+  return true;
+};
+
+EventEmitter.prototype.addListener = function(type, listener) {
+  var m;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events)
+    this._events = {};
+
+  // To avoid recursion in the case that type === "newListener"! Before
+  // adding it to the listeners, first emit "newListener".
+  if (this._events.newListener)
+    this.emit('newListener', type,
+              isFunction(listener.listener) ?
+              listener.listener : listener);
+
+  if (!this._events[type])
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  else if (isObject(this._events[type]))
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  else
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+
+  // Check for listener leak
+  if (isObject(this._events[type]) && !this._events[type].warned) {
+    var m;
+    if (!isUndefined(this._maxListeners)) {
+      m = this._maxListeners;
+    } else {
+      m = EventEmitter.defaultMaxListeners;
+    }
+
+    if (m && m > 0 && this._events[type].length > m) {
+      this._events[type].warned = true;
+      console.error('(node) warning: possible EventEmitter memory ' +
+                    'leak detected. %d listeners added. ' +
+                    'Use emitter.setMaxListeners() to increase limit.',
+                    this._events[type].length);
+      if (typeof console.trace === 'function') {
+        // not supported in IE 10
+        console.trace();
+      }
+    }
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  var fired = false;
+
+  function g() {
+    this.removeListener(type, g);
+
+    if (!fired) {
+      fired = true;
+      listener.apply(this, arguments);
+    }
+  }
+
+  g.listener = listener;
+  this.on(type, g);
+
+  return this;
+};
+
+// emits a 'removeListener' event iff the listener was removed
+EventEmitter.prototype.removeListener = function(type, listener) {
+  var list, position, length, i;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events || !this._events[type])
+    return this;
+
+  list = this._events[type];
+  length = list.length;
+  position = -1;
+
+  if (list === listener ||
+      (isFunction(list.listener) && list.listener === listener)) {
+    delete this._events[type];
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+
+  } else if (isObject(list)) {
+    for (i = length; i-- > 0;) {
+      if (list[i] === listener ||
+          (list[i].listener && list[i].listener === listener)) {
+        position = i;
+        break;
+      }
+    }
+
+    if (position < 0)
+      return this;
+
+    if (list.length === 1) {
+      list.length = 0;
+      delete this._events[type];
+    } else {
+      list.splice(position, 1);
+    }
+
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  var key, listeners;
+
+  if (!this._events)
+    return this;
+
+  // not listening for removeListener, no need to emit
+  if (!this._events.removeListener) {
+    if (arguments.length === 0)
+      this._events = {};
+    else if (this._events[type])
+      delete this._events[type];
+    return this;
+  }
+
+  // emit removeListener for all listeners on all events
+  if (arguments.length === 0) {
+    for (key in this._events) {
+      if (key === 'removeListener') continue;
+      this.removeAllListeners(key);
+    }
+    this.removeAllListeners('removeListener');
+    this._events = {};
+    return this;
+  }
+
+  listeners = this._events[type];
+
+  if (isFunction(listeners)) {
+    this.removeListener(type, listeners);
+  } else {
+    // LIFO order
+    while (listeners.length)
+      this.removeListener(type, listeners[listeners.length - 1]);
+  }
+  delete this._events[type];
+
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  var ret;
+  if (!this._events || !this._events[type])
+    ret = [];
+  else if (isFunction(this._events[type]))
+    ret = [this._events[type]];
+  else
+    ret = this._events[type].slice();
+  return ret;
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  var ret;
+  if (!emitter._events || !emitter._events[type])
+    ret = 0;
+  else if (isFunction(emitter._events[type]))
+    ret = 1;
+  else
+    ret = emitter._events[type].length;
+  return ret;
+};
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
 
 },{}]},{},[1]);
