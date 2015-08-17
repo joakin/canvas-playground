@@ -41,7 +41,7 @@ function render (ctx, width, height) {
   ctx.fillStyle = rgb(0, 0, 0)
   ctx.textAlign = 'center'
   ctx.font = 'bold 24pt sans-serif'
-  ctx.fillText('internet session breakouts', width / 2, height * 0.2)
+  ctx.fillText('internet session breakages', width / 2, height * 0.2)
   var points = pingData.map(function (p) {
     p.width = p.value * ((1 - widthPad * 2) * width) / total
     return p
